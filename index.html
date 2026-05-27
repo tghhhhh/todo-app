@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My To-Do List</title>
+    <title>My To-Do List with Time Tracking</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <header>
             <h1>📝 My To-Do List</h1>
-            <p class="subtitle">Stay organized and productive</p>
+            <p class="subtitle">Stay organized and track your time</p>
         </header>
 
         <main>
@@ -87,6 +87,29 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- Modal for Time Picker -->
+    <div id="timeModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modalTitle">Set Time</h2>
+            <div class="time-inputs">
+                <div class="time-group">
+                    <label for="startTimeInput">Start Time:</label>
+                    <input type="datetime-local" id="startTimeInput" class="time-input">
+                </div>
+                <div class="time-group">
+                    <label for="endTimeInput">End Time:</label>
+                    <input type="datetime-local" id="endTimeInput" class="time-input">
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button id="saveTimes" class="save-btn">Save Times</button>
+                <button id="clearTimes" class="clear-time-btn">Clear Times</button>
+            </div>
+            <div id="durationDisplay" class="duration-display"></div>
+        </div>
     </div>
 
     <!-- Hidden Toast Notification -->

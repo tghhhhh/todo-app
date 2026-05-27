@@ -1,9 +1,10 @@
-// To-Do List Application with Local Storage, Backup & Export
+// To-Do List Application with Time Tracking, Local Storage, Backup & Export
 
 class TodoApp {
     constructor() {
         this.tasks = [];
         this.currentFilter = 'all';
+        this.currentTaskId = null;
         this.storageKey = 'todoAppTasks';
         this.maxStorageEstimate = 5000; // KB
         
@@ -26,6 +27,15 @@ class TodoApp {
         this.importFile = document.getElementById('importFile');
         this.storageInfo = document.getElementById('storageInfo');
         this.toast = document.getElementById('toast');
+        
+        // Modal Elements
+        this.modal = document.getElementById('timeModal');
+        this.closeBtn = document.querySelector('.close');
+        this.startTimeInput = document.getElementById('startTimeInput');
+        this.endTimeInput = document.getElementById('endTimeInput');
+        this.saveTimesBtn = document.getElementById('saveTimes');
+        this.clearTimesBtn = document.getElementById('clearTimes');
+        this.durationDisplay = document.getElementById('durationDisplay');
         
         // Initialize
         this.init();
@@ -52,6 +62,18 @@ class TodoApp {
         this.importBtn.addEventListener('click', () => this.importFile.click());
         this.statsBtn.addEventListener('click', () => this.toggleStorageInfo());
         this.importFile.addEventListener('change', (e) => this.importTasksFromFile(e));
+        
+        // Modal buttons
+        this.closeBtn.addEventListener('click', () => this.closeTimeModal());
+        this.saveTimesBtn.addEventListener('click', () => this.saveTimes());
+        this.clearTimesBtn.addEventListener('click', () => this.clearTaskTimes());
+        this.startTimeInput.addEventListener('change', () => this.calculateDuration());
+        this.endTimeInput.addEventListener('change', () => this.calculateDuration());
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', (e) => {
+            if (e.target === this.modal) this.closeTimeModal();
+        });
         
         // Initial render
         this.render();
@@ -91,7 +113,9 @@ class TodoApp {
             id: Date.now(),
             text: text,
             completed: false,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            startTime: null,
+            endTime: null
         };
         
         this.tasks.unshift(task);
@@ -145,6 +169,125 @@ class TodoApp {
             this.showToast(`${completed} task(s) cleared! ✓`, 'success');
             this.render();
         }
+    }
+
+    // Open time modal
+    openTimeModal(taskId) {
+        this.currentTaskId = taskId;
+        const task = this.tasks.find(t => t.id === taskId);
+        
+        if (task) {
+            this.startTimeInput.value = task.startTime ? task.startTime.slice(0, 16) : '';
+            this.endTimeInput.value = task.endTime ? task.endTime.slice(0, 16) : '';
+            this.calculateDuration();
+            this.modal.style.display = 'flex';
+        }
+    }
+
+    // Close time modal
+    closeTimeModal() {
+        this.modal.style.display = 'none';
+        this.currentTaskId = null;
+        this.durationDisplay.innerHTML = '';
+    }
+
+    // Calculate and display duration
+    calculateDuration() {
+        const startTime = this.startTimeInput.value;
+        const endTime = this.endTimeInput.value;
+        
+        if (!startTime || !endTime) {
+            this.durationDisplay.innerHTML = '';
+            return;
+        }
+        
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        
+        if (end <= start) {
+            this.durationDisplay.innerHTML = '<span style="color: #ff6b6b;">⚠️ End time must be after start time</span>';
+            return;
+        }
+        
+        const diff = end - start;
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        
+        let durationText = '';
+        if (hours > 0) durationText += `${hours}h `;
+        durationText += `${minutes}m`;
+        
+        this.durationDisplay.innerHTML = `<strong>⏱️ Duration: ${durationText}</strong>`;
+    }
+
+    // Save times for task
+    saveTimes() {
+        const startTime = this.startTimeInput.value;
+        const endTime = this.endTimeInput.value;
+        
+        if (!startTime || !endTime) {
+            this.showToast('Please set both start and end times', 'error');
+            return;
+        }
+        
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        
+        if (end <= start) {
+            this.showToast('End time must be after start time', 'error');
+            return;
+        }
+        
+        const task = this.tasks.find(t => t.id === this.currentTaskId);
+        if (task) {
+            task.startTime = new Date(startTime).toISOString();
+            task.endTime = new Date(endTime).toISOString();
+            this.saveTasks();
+            this.showToast('Times saved successfully! ✓', 'success');
+            this.closeTimeModal();
+            this.render();
+        }
+    }
+
+    // Clear times for task
+    clearTaskTimes() {
+        const task = this.tasks.find(t => t.id === this.currentTaskId);
+        if (task) {
+            task.startTime = null;
+            task.endTime = null;
+            this.saveTasks();
+            this.showToast('Times cleared! ✓', 'success');
+            this.closeTimeModal();
+            this.render();
+        }
+    }
+
+    // Format time for display
+    formatTime(isoString) {
+        if (!isoString) return null;
+        const date = new Date(isoString);
+        return date.toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    // Calculate duration between two times
+    formatDuration(startIso, endIso) {
+        if (!startIso || !endIso) return null;
+        const start = new Date(startIso);
+        const end = new Date(endIso);
+        const diff = end - start;
+        
+        if (diff < 0) return 'Invalid';
+        
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        
+        if (hours > 0) return `${hours}h ${minutes}m`;
+        return `${minutes}m`;
     }
 
     // Export tasks to JSON file
@@ -324,19 +467,42 @@ class TodoApp {
         const div = document.createElement('div');
         div.className = `task-item ${task.completed ? 'completed' : ''}`;
         
+        const startTimeFormatted = this.formatTime(task.startTime);
+        const endTimeFormatted = this.formatTime(task.endTime);
+        const duration = this.formatDuration(task.startTime, task.endTime);
+        
+        let timeHTML = '';
+        if (task.startTime || task.endTime) {
+            timeHTML = '<div class="task-time">';
+            if (startTimeFormatted) timeHTML += `<span class="time-badge">📅 Start: ${startTimeFormatted}</span>`;
+            if (endTimeFormatted) timeHTML += `<span class="time-badge">📅 End: ${endTimeFormatted}</span>`;
+            if (duration) timeHTML += `<span class="time-badge duration">⏱️ ${duration}</span>`;
+            timeHTML += '</div>';
+        }
+        
         div.innerHTML = `
             <input 
                 type="checkbox" 
                 class="checkbox" 
                 ${task.completed ? 'checked' : ''}
             >
-            <span class="task-text">${this.escapeHtml(task.text)}</span>
-            <button class="delete-btn">Delete</button>
+            <div class="task-content">
+                <span class="task-text">${this.escapeHtml(task.text)}</span>
+                ${timeHTML}
+            </div>
+            <div class="task-buttons">
+                <button class="time-btn">⏰ Set Time</button>
+                <button class="delete-btn">Delete</button>
+            </div>
         `;
         
         // Add event listeners
         div.querySelector('.checkbox').addEventListener('change', () => {
             this.toggleTask(task.id);
+        });
+        
+        div.querySelector('.time-btn').addEventListener('click', () => {
+            this.openTimeModal(task.id);
         });
         
         div.querySelector('.delete-btn').addEventListener('click', () => {
