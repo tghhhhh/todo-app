@@ -109,11 +109,13 @@ class TodoApp {
             return;
         }
         
+        const now = new Date().toISOString();
         const task = {
             id: Date.now(),
             text: text,
             completed: false,
-            createdAt: new Date().toISOString(),
+            createdAt: now,
+            completedAt: null,
             startTime: null,
             endTime: null
         };
@@ -138,6 +140,13 @@ class TodoApp {
         const task = this.tasks.find(t => t.id === id);
         if (task) {
             task.completed = !task.completed;
+            // Set completed time when marking as done
+            if (task.completed) {
+                task.completedAt = new Date().toISOString();
+            } else {
+                // Clear completed time if unchecking
+                task.completedAt = null;
+            }
             this.saveTasks();
             this.render();
         }
@@ -217,7 +226,7 @@ class TodoApp {
         if (hours > 0) durationText += `${hours}h `;
         durationText += `${minutes}m`;
         
-        this.durationDisplay.innerHTML = `<strong>⏱️ Duration: ${durationText}</strong>`;
+        this.durationDisplay.innerHTML = `<strong>⏱️ Work Duration: ${durationText}</strong>`;
     }
 
     // Save times for task
@@ -243,7 +252,7 @@ class TodoApp {
             task.startTime = new Date(startTime).toISOString();
             task.endTime = new Date(endTime).toISOString();
             this.saveTasks();
-            this.showToast('Times saved successfully! ✓', 'success');
+            this.showToast('Work times saved successfully! ✓', 'success');
             this.closeTimeModal();
             this.render();
         }
@@ -256,7 +265,7 @@ class TodoApp {
             task.startTime = null;
             task.endTime = null;
             this.saveTasks();
-            this.showToast('Times cleared! ✓', 'success');
+            this.showToast('Work times cleared! ✓', 'success');
             this.closeTimeModal();
             this.render();
         }
@@ -288,6 +297,26 @@ class TodoApp {
         
         if (hours > 0) return `${hours}h ${minutes}m`;
         return `${minutes}m`;
+    }
+
+    // Calculate time spent between completion and creation
+    formatTimeSpent(createdAt, completedAt) {
+        if (!completedAt) return null;
+        const created = new Date(createdAt);
+        const completed = new Date(completedAt);
+        const diff = completed - created;
+        
+        if (diff < 0) return null;
+        
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        
+        let result = '';
+        if (days > 0) result += `${days}d `;
+        if (hours > 0) result += `${hours}h `;
+        result += `${minutes}m`;
+        return result;
     }
 
     // Export tasks to JSON file
@@ -467,18 +496,40 @@ class TodoApp {
         const div = document.createElement('div');
         div.className = `task-item ${task.completed ? 'completed' : ''}`;
         
+        // Format times
+        const createdTimeFormatted = this.formatTime(task.createdAt);
+        const completedTimeFormatted = this.formatTime(task.completedAt);
         const startTimeFormatted = this.formatTime(task.startTime);
         const endTimeFormatted = this.formatTime(task.endTime);
-        const duration = this.formatDuration(task.startTime, task.endTime);
+        const workDuration = this.formatDuration(task.startTime, task.endTime);
+        const timeSpent = this.formatTimeSpent(task.createdAt, task.completedAt);
         
-        let timeHTML = '';
-        if (task.startTime || task.endTime) {
-            timeHTML = '<div class="task-time">';
-            if (startTimeFormatted) timeHTML += `<span class="time-badge">📅 Start: ${startTimeFormatted}</span>`;
-            if (endTimeFormatted) timeHTML += `<span class="time-badge">📅 End: ${endTimeFormatted}</span>`;
-            if (duration) timeHTML += `<span class="time-badge duration">⏱️ ${duration}</span>`;
-            timeHTML += '</div>';
+        // Timeline section with all times
+        let timelineHTML = '<div class="task-timeline">';
+        
+        // Task creation time
+        if (createdTimeFormatted) {
+            timelineHTML += `<div class="timeline-item"><span class="timeline-badge">📝 Added:</span> <span class="timeline-value">${createdTimeFormatted}</span></div>`;
         }
+        
+        // Work times (if set)
+        if (startTimeFormatted || endTimeFormatted) {
+            timelineHTML += '<div class="timeline-section"><strong>Work Time:</strong>';
+            if (startTimeFormatted) timelineHTML += `<div class="timeline-item indent"><span class="timeline-badge">🚀 Start:</span> <span class="timeline-value">${startTimeFormatted}</span></div>`;
+            if (endTimeFormatted) timelineHTML += `<div class="timeline-item indent"><span class="timeline-badge">🏁 End:</span> <span class="timeline-value">${endTimeFormatted}</span></div>`;
+            if (workDuration) timelineHTML += `<div class="timeline-item indent"><span class="timeline-badge duration">⏱️ Duration:</span> <span class="timeline-value">${workDuration}</span></div>`;
+            timelineHTML += '</div>';
+        }
+        
+        // Task completion time (if completed)
+        if (completedTimeFormatted) {
+            timelineHTML += `<div class="timeline-item completed-item"><span class="timeline-badge completed">✅ Completed:</span> <span class="timeline-value">${completedTimeFormatted}</span></div>`;
+            if (timeSpent) {
+                timelineHTML += `<div class="timeline-item"><span class="timeline-badge">⏳ Time Spent:</span> <span class="timeline-value">${timeSpent}</span></div>`;
+            }
+        }
+        
+        timelineHTML += '</div>';
         
         div.innerHTML = `
             <input 
@@ -488,10 +539,10 @@ class TodoApp {
             >
             <div class="task-content">
                 <span class="task-text">${this.escapeHtml(task.text)}</span>
-                ${timeHTML}
+                ${timelineHTML}
             </div>
             <div class="task-buttons">
-                <button class="time-btn">⏰ Set Time</button>
+                <button class="time-btn">⏰ Set Work Time</button>
                 <button class="delete-btn">Delete</button>
             </div>
         `;
