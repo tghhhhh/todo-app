@@ -50,12 +50,47 @@
                 <p class="empty-message">No tasks yet. Add one to get started!</p>
             </div>
 
-            <!-- Clear Completed Button -->
-            <button id="clearBtn" class="clear-btn" style="display: none;">
-                Clear Completed Tasks
-            </button>
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button id="clearBtn" class="clear-btn" style="display: none;">
+                    Clear Completed Tasks
+                </button>
+            </div>
+
+            <!-- Backup & Export Section -->
+            <div class="backup-section">
+                <h3>💾 Backup & Export</h3>
+                <div class="backup-buttons">
+                    <button id="exportBtn" class="export-btn" title="Download tasks as JSON file">
+                        📥 Export Tasks
+                    </button>
+                    <button id="importBtn" class="import-btn" title="Load tasks from JSON file">
+                        📤 Import Tasks
+                    </button>
+                    <button id="statsBtn" class="stats-btn" title="View storage statistics">
+                        📊 Storage Info
+                    </button>
+                </div>
+                <input 
+                    type="file" 
+                    id="importFile" 
+                    accept=".json" 
+                    style="display: none;"
+                >
+                <div id="storageInfo" class="storage-info" style="display: none;">
+                    <p><strong>Storage Usage:</strong> <span id="storageUsed">0</span> KB</p>
+                    <p><strong>Available Space:</strong> ~<span id="storageAvailable">5000</span> KB</p>
+                    <p><strong>Usage Percentage:</strong> <span id="storagePercent">0</span>%</p>
+                    <div class="storage-bar">
+                        <div id="storageBar" class="storage-fill"></div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
+
+    <!-- Hidden Toast Notification -->
+    <div id="toast" class="toast"></div>
 
     <script src="app.js"></script>
 </body>
